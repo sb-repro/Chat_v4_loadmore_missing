@@ -26,17 +26,37 @@ const sb = SendbirdChat.init({
 export default () => {
   const [user, setUser] = useState<User>();
   const [gcc, setGcc] = useState<GroupChannelCollection>();
+  const [gccs, setGccs] = useState<GroupChannelCollection[]>([]);
   const update = useForceUpdate();
 
   useEffect(() => {
     sb.connect('TestUser').then(async currentUser => {
       setUser(currentUser);
       setGcc(createChannelCollection());
+
+      setGccs(() => {
+        return Array(50)
+          .fill(null)
+          .map(() => createChannelCollection());
+      });
     });
   }, []);
 
   return (
     <SafeAreaView>
+      <Text>Generated collections:{gccs.length}</Text>
+      <Text>
+        loadMore not defined collections:
+        {gccs.filter(it => !it.loadMore).length}
+      </Text>
+      <View
+        style={{
+          height: 1,
+          width: '100%',
+          backgroundColor: 'black',
+          marginVertical: 20,
+        }}
+      />
       {gcc && (
         <View style={{width: '90%', alignSelf: 'center'}}>
           <Text>{'gcc.hasMore ==>  ' + gcc.hasMore}</Text>
