@@ -1,118 +1,106 @@
-/**
- * Sample React Native App
- * https://github.com/facebook/react-native
- *
- * @format
- */
-
-import React from 'react';
-import type {PropsWithChildren} from 'react';
 import {
+  Image,
   SafeAreaView,
-  ScrollView,
-  StatusBar,
   StyleSheet,
   Text,
-  useColorScheme,
+  TouchableOpacity,
   View,
 } from 'react-native';
-
+import SendbirdChat, {User} from '@sendbird/chat';
 import {
-  Colors,
-  DebugInstructions,
-  Header,
-  LearnMoreLinks,
-  ReloadInstructions,
-} from 'react-native/Libraries/NewAppScreen';
+  GroupChannelCollection,
+  GroupChannelFilter,
+  GroupChannelListOrder,
+  GroupChannelModule,
+} from '@sendbird/chat/groupChannel';
+import React, {useEffect, useState} from 'react';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
-type SectionProps = PropsWithChildren<{
-  title: string;
-}>;
+const sb = SendbirdChat.init({
+  appId: '2D7B4CDB-932F-4082-9B09-A1153792DC8D',
+  modules: [new GroupChannelModule()],
+  localCacheEnabled: true,
+  useAsyncStorageStore: AsyncStorage,
+});
 
-function Section({children, title}: SectionProps): JSX.Element {
-  const isDarkMode = useColorScheme() === 'dark';
-  return (
-    <View style={styles.sectionContainer}>
-      <Text
-        style={[
-          styles.sectionTitle,
-          {
-            color: isDarkMode ? Colors.white : Colors.black,
-          },
-        ]}>
-        {title}
-      </Text>
-      <Text
-        style={[
-          styles.sectionDescription,
-          {
-            color: isDarkMode ? Colors.light : Colors.dark,
-          },
-        ]}>
-        {children}
-      </Text>
-    </View>
-  );
-}
+export default () => {
+  const [user, setUser] = useState<User>();
+  const [gcc, setGcc] = useState<GroupChannelCollection>();
+  const update = useForceUpdate();
 
-function App(): JSX.Element {
-  const isDarkMode = useColorScheme() === 'dark';
-
-  const backgroundStyle = {
-    backgroundColor: isDarkMode ? Colors.darker : Colors.lighter,
-  };
+  useEffect(() => {
+    sb.connect('TestUser').then(async currentUser => {
+      setUser(currentUser);
+      setGcc(createChannelCollection());
+    });
+  }, []);
 
   return (
-    <SafeAreaView style={backgroundStyle}>
-      <StatusBar
-        barStyle={isDarkMode ? 'light-content' : 'dark-content'}
-        backgroundColor={backgroundStyle.backgroundColor}
-      />
-      <ScrollView
-        contentInsetAdjustmentBehavior="automatic"
-        style={backgroundStyle}>
-        <Header />
-        <View
-          style={{
-            backgroundColor: isDarkMode ? Colors.black : Colors.white,
-          }}>
-          <Section title="Step One">
-            Edit <Text style={styles.highlight}>App.tsx</Text> to change this
-            screen and then come back to see your edits.
-          </Section>
-          <Section title="See Your Changes">
-            <ReloadInstructions />
-          </Section>
-          <Section title="Debug">
-            <DebugInstructions />
-          </Section>
-          <Section title="Learn More">
-            Read the docs to discover what to do next:
-          </Section>
-          <LearnMoreLinks />
+    <SafeAreaView>
+      {gcc && (
+        <View style={{width: '90%', alignSelf: 'center'}}>
+          <Text>{'gcc.hasMore ==>  ' + gcc.hasMore}</Text>
+          <Text>{'gcc.loadMore ==>  ' + gcc.loadMore}</Text>
+
+          {/** If loadMore is not defined, this button should not be visible **/}
+          {gcc.loadMore && (
+            <TouchableOpacity
+              style={styles.button}
+              onPress={async () => {
+                await gcc.loadMore();
+                update();
+              }}>
+              <Text style={{color: 'white'}}>
+                {'GroupChannelCollection.loadMore()'}
+              </Text>
+            </TouchableOpacity>
+          )}
+
+          <Text>{'gcc.channels.length ==>  ' + gcc.channels.length}</Text>
+          <View style={{alignSelf: 'center', width: '100%'}}>
+            {gcc.channels.map(channel => {
+              return (
+                <View
+                  key={channel.url}
+                  style={{flexDirection: 'row', borderWidth: 1, width: '100%'}}>
+                  <Image
+                    style={{width: 20, height: 20, backgroundColor: 'gray'}}
+                    source={{uri: channel.coverUrl || 'https://invalid-url'}}
+                  />
+                  <Text>{'name:' + channel.name}</Text>
+                </View>
+              );
+            })}
+          </View>
         </View>
-      </ScrollView>
+      )}
     </SafeAreaView>
   );
+};
+
+function createChannelCollection() {
+  const filter = new GroupChannelFilter();
+  filter.includeEmpty = true;
+
+  return sb.groupChannel.createGroupChannelCollection({
+    filter,
+    limit: 100,
+    order: GroupChannelListOrder.LATEST_LAST_MESSAGE,
+  });
+}
+
+function useForceUpdate() {
+  const [_, setState] = useState(0);
+  return () => setState(prev => prev + 1);
 }
 
 const styles = StyleSheet.create({
-  sectionContainer: {
-    marginTop: 32,
-    paddingHorizontal: 24,
-  },
-  sectionTitle: {
-    fontSize: 24,
-    fontWeight: '600',
-  },
-  sectionDescription: {
-    marginTop: 8,
-    fontSize: 18,
-    fontWeight: '400',
-  },
-  highlight: {
-    fontWeight: '700',
+  button: {
+    width: '100%',
+    height: 30,
+    backgroundColor: '#2a68ff',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 20,
   },
 });
-
-export default App;
